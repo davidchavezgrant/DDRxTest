@@ -1,0 +1,26 @@
+version: '3.7'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Api.Dockerfile
+    environment:
+      - ASPNETCORE_URLS=http://*:8500
+    networks:
+      - testnet
+  web:
+    build:
+      context: .
+      dockerfile: docker/Web.Dockerfile
+    environment:
+      - ASPNETCORE_URLS=http://*:9080
+    ports:
+      - "9080:9080"
+    depends_on:
+      - api
+    networks:
+      - testnet
+networks:
+  testnet:
+    driver: bridge
