@@ -11,7 +11,11 @@ builder.Services.AddServerSideBlazor();
 builder.Services.AddSingleton<WeatherForecastService>();
 builder.Services
         .AddRefitClient<IProfilesApiContract>()
-        .ConfigureHttpClient(c => c.BaseAddress = new Uri("https://localhost:5001"));
+        .ConfigureHttpClient(c => c.BaseAddress = new Uri("https://localhost:7231/api"));
+
+builder.Services.AddScoped<IProfilesApiClient, ProfilesApiClient>();
+builder.Services.AddScoped<IProfilesCache, ProfilesCache>();
+builder.Services.AddScoped<ProfilesViewModel>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

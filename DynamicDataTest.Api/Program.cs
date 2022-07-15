@@ -23,16 +23,15 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseAuthorization();
 app.MapGet("/api/profiles", (ProfilesDbContext dbContext) => 
         {
             var profiles = dbContext.Profiles.ToList();
-            return profiles;
+            return profiles.Select(p => p.ToDto());
         });
 app.MapGet("/api/profiles/{id}", (Guid id, ProfilesDbContext dbContext) => 
         {
             var profile = dbContext.Profiles.FirstOrDefault(p => p.Id == id);
-            return profile;
+            return profile.ToDto();
         });
 app.MapPost("/api/profiles", (ProfileDto dto, ProfilesDbContext dbContext) => 
         {

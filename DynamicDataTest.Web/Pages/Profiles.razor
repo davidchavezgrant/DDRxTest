@@ -1,0 +1,28 @@
+@page "/profiles"
+@using DynamicDataTest.Web.Data
+@using ReactiveUI
+@using DynamicDataTest.Contracts
+@using System.Collections.ObjectModel
+@using System.Reactive.Linq
+@inherits ReactiveUI.Blazor.ReactiveComponentBase<DynamicDataTest.Web.Data.ProfilesViewModel>
+@inject ProfilesViewModel InjectedViewModel; 
+<h3>Profiles</h3>
+
+@foreach (var profile in ViewModel.Profiles)
+{
+   <h3>@profile.Id</h3>
+   <h3>@profile.Username</h3>
+   <button @onclick="() => profile.RemoveCommand.Execute().Subscribe()">Delete</button>
+}
+
+@code {
+
+   private void Delete(Guid id) => ViewModel.DeleteProfile.Execute(id).SubscribeOn(RxApp.MainThreadScheduler).Subscribe();
+   protected override void OnInitialized()
+   {
+      this.ViewModel = InjectedViewModel;
+      this.ViewModel.ExecuteInitialize().SubscribeOn(RxApp.MainThreadScheduler).Subscribe();
+      base.OnInitialized();
+   }
+
+}

@@ -17,4 +17,9 @@ class Profile
             Created = DateTime.Now
         };
     }
+
+    public ProfileDto ToDto()
+    {
+        return new ProfileDto(this.Id, this.Handle, this.Bio);
+    }
 }
