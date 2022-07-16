@@ -4,7 +4,8 @@
 @using DynamicDataTest.Contracts
 @using System.Collections.ObjectModel
 @using System.Reactive.Linq
-@inherits ReactiveUI.Blazor.ReactiveComponentBase<DynamicDataTest.Web.Data.ProfilesViewModel>
+@using DynamicDataTest.Web.Data.Profiles
+@inherits ReactiveUI.Blazor.ReactiveComponentBase<DynamicDataTest.Web.Data.Profiles.ProfilesViewModel>
 @inject ProfilesViewModel InjectedViewModel; 
 <h3>Profiles</h3>
 
@@ -17,12 +18,11 @@
 
 @code {
 
-   private void Delete(Guid id) => ViewModel.DeleteProfile.Execute(id).SubscribeOn(RxApp.MainThreadScheduler).Subscribe();
-   protected override void OnInitialized()
+   protected override async Task OnInitializedAsync()
    {
       this.ViewModel = InjectedViewModel;
       this.ViewModel.ExecuteInitialize().SubscribeOn(RxApp.MainThreadScheduler).Subscribe();
-      base.OnInitialized();
+      await base.OnInitializedAsync();
    }
 
 }

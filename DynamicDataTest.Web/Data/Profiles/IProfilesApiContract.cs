@@ -1,6 +1,8 @@
-using Refit;
 using DynamicDataTest.Contracts;
-namespace DynamicDataTest.Web.Data;
+
+using Refit;
+
+namespace DynamicDataTest.Web.Data.Profiles;
 
 interface IProfilesApiContract
 {

@@ -1,5 +1,6 @@
 using DynamicDataTest.Contracts;
-namespace DynamicDataTest.Web.Data;
+
+namespace DynamicDataTest.Web.Data.Profiles;
 
 interface IProfilesApiClient
 {

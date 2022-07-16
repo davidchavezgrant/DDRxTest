@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Reactive;
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
 
 using DynamicData;
@@ -8,9 +7,8 @@ using DynamicData;
 using DynamicDataTest.Contracts;
 
 using ReactiveUI;
-using ReactiveUI.Fody.Helpers;
 
-namespace DynamicDataTest.Web.Data;
+namespace DynamicDataTest.Web.Data.Profiles;
 
 public sealed class ProfilesViewModel : ReactiveObject
 {
@@ -22,21 +20,15 @@ public sealed class ProfilesViewModel : ReactiveObject
 
         this._profilesCache
             .ObserveOn(RxApp.MainThreadScheduler)
-            .Filter(x => !this.omittedGuids.Contains(x.Id))
-            .Bind(out profiles)
+            .Bind(out this.profiles)
             .DisposeMany()
             .Subscribe(_ => {}, RxApp.DefaultExceptionHandler.OnNext);
 
-        this.DeleteProfile = ReactiveCommand.Create((Guid id) => this.omittedGuids.Add(id), default,RxApp.MainThreadScheduler);
     }
     
-    [Reactive]
-    ObservableCollection<Guid> omittedGuids { get; set; } = new ObservableCollection<Guid>();
     
     readonly ReadOnlyObservableCollection<ProfileDto> profiles;
-    public ReadOnlyObservableCollection<ProfileDto> Profiles => profiles;
+    public ReadOnlyObservableCollection<ProfileDto> Profiles => this.profiles;
 
     public IObservable<Unit>           ExecuteInitialize() => this._profilesCache.Load();
-    [Reactive]
-    public ReactiveCommand<Guid, Unit> DeleteProfile       { get; private set; }
 }

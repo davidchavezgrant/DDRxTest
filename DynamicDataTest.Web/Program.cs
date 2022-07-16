@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Refit;
 using DynamicDataTest.Web.Data;
+using DynamicDataTest.Web.Data.Profiles;
 
 var builder = WebApplication.CreateBuilder(args);
 
