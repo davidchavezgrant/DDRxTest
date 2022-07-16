@@ -1,59 +1,45 @@
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
 
 using DynamicData;
+using DynamicData.Binding;
+
+using ReactiveUI;
 
 namespace DynamicDataTest.Web.Data.Trades;
 
 sealed class TradeViewModel
 {
-	readonly TradeService      _service;
-	readonly MarketDataService _marketDataService;
+	readonly IObservableCollection<TradeProxy> _data = new ObservableCollectionExtended<TradeProxy>();
+	readonly TradeClient                       _tradeClient;
 
-	public TradeViewModel(TradeService service, MarketDataService marketDataService)
+	public TradeViewModel(TradeClient tradeClient, SearchHints searchHints)
 	{
-		this._service           = service;
-		this._marketDataService = marketDataService;
+		this._tradeClient = tradeClient;
+		this.SearchHints  = searchHints;
 
-		var stream = service.Trades
-		                    .Connect()
-		                    .Filter(trade => trade.Status == TradeStatus.Live)// get live streams
-		                    .Group(trade => trade.CurrencyPair)               // group into streams by currency pair
-		                    .SubscribeMany(grouping =>                        // action to apply to group
-		                    {
-			                    var locker = new object();
+		var filter = this.SearchHints.WhenValueChanged(t => t.SearchText)
+		                 .Select(BuildFilter);
 
-			                    decimal latestPrice = 0;
+		var loader = this._tradeClient.Trades
+		                 .Connect(trade => trade.Status == TradeStatus.Live)
+		                 .Filter(filter)
+		                 .Transform(trade => new TradeProxy(trade))
+		                 .Sort(SortExpressionComparer<TradeProxy>.Descending(t => t.Timestamp), SortOptimisations.ComparesImmutableValuesOnly)
+		                 .ObserveOn(RxApp.TaskpoolScheduler)
+		                 .Bind(this._data)
+		                 .DisposeMany()
+		                 .Subscribe();
 
-			                    var priceHasChanged = ObservePrice(grouping.Key)
-			                                          .Synchronize(locker)
-			                                          .Subscribe(price =>
-
-			                                          {
-
-				                                          latestPrice = price.Bid;
-
-				                                          TradeViewModel.UpdateTradesWithPrice(grouping.Cache.Items, latestPrice);
-			                                          });
-
-			                    var dataHasChanged = grouping.Cache.Connect()
-			                                                 .WhereReasonsAre(ChangeReason.Add, ChangeReason.Update)
-			                                                 .Synchronize(locker)
-			                                                 .Subscribe(changes => TradeViewModel.UpdateTradesWithPrice(changes.Select(change => change.Current), latestPrice));
-
-			                    return new CompositeDisposable(priceHasChanged, dataHasChanged);
-		                    })
-		                    .Subscribe();
 
 	}
 
-	IObservable<MarketData> ObservePrice(string currencyPair) => this._marketDataService.Watch(currencyPair);
+	public SearchHints SearchHints { get; }
 
-	static void UpdateTradesWithPrice(IEnumerable<Trade> trades, decimal price)
+	Func<Trade, bool> BuildFilter(string searchText)
 	{
-		foreach (var trade in trades)
-		{
-			trade.Price = price;
-		}
+		if (string.IsNullOrEmpty(searchText)) return trade => true;
+
+		return t => t.CurrencyPair.Contains(searchText, StringComparison.OrdinalIgnoreCase)
+		         || t.Customer.Contains(searchText, StringComparison.OrdinalIgnoreCase);
 	}
 }

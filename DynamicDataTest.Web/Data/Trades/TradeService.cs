@@ -1,95 +1,59 @@
 using System.Reactive.Disposables;
+using System.Reactive.Linq;
 
 using DynamicData;
-using DynamicData.Kernel;
 
 namespace DynamicDataTest.Web.Data.Trades;
 
-public interface ITradeService
+sealed class TradeService
 {
-	IObservableCache<Trade, long> Trades { get; }
-}
+	readonly TradeClient      _client;
+	readonly MarketDataService _marketDataService;
 
-
-class TradeService : ITradeService
-{
-	readonly ILogger           _logger;
-	readonly SchedulerProvider _schedulerProvider;
-	readonly TradeGenerator    _tradeGenerator;
-
-	public TradeService(ILogger logger, TradeGenerator tradeGenerator, SchedulerProvider schedulerProvider)
+	public TradeService(TradeClient client, MarketDataService marketDataService)
 	{
-		this._logger            = logger;
-		this._tradeGenerator    = tradeGenerator;
-		this._schedulerProvider = schedulerProvider;
+		this._client           = client;
+		this._marketDataService = marketDataService;
+
+		var stream = client.Trades
+		                    .Connect()
+		                    .Filter(trade => trade.Status == TradeStatus.Live)// get live streams
+		                    .Group(trade => trade.CurrencyPair)               // group into streams by currency pair
+		                    .SubscribeMany(grouping =>                        // action to apply to group
+		                    {
+			                    var locker = new object();
+
+			                    decimal latestPrice = 0;
+
+			                    var priceHasChanged = ObservePrice(grouping.Key)
+			                                          .Synchronize(locker)
+			                                          .Subscribe(price =>
+
+			                                          {
+
+				                                          latestPrice = price.Bid;
+
+				                                          TradeService.UpdateTradesWithPrice(grouping.Cache.Items, latestPrice);
+			                                          });
+
+			                    var dataHasChanged = grouping.Cache.Connect()
+			                                                 .WhereReasonsAre(ChangeReason.Add, ChangeReason.Update)
+			                                                 .Synchronize(locker)
+			                                                 .Subscribe(changes => TradeService.UpdateTradesWithPrice(changes.Select(change => change.Current), latestPrice));
+
+			                    return new CompositeDisposable(priceHasChanged, dataHasChanged);
+		                    })
+		                    .Subscribe();
+
 	}
 
-	/// <inheritdoc />
-	public IObservableCache<Trade, long> Trades { get; }
+	IObservable<MarketData> ObservePrice(string currencyPair) => this._marketDataService.Watch(currencyPair);
 
-	IObservable<IChangeSet<Trade, long>> GenerateTradesAndMaintainCache()
+	static void UpdateTradesWithPrice(IEnumerable<Trade> trades, decimal price)
 	{
-		//construct an cache datasource specifying that the primary key is Trade.Id
-		return ObservableChangeSet.Create<Trade, long>(subscribe: cache =>
-		                                               {
-			                                               /*
-			                                                   The following code emulates an external trade provider. 
-			                                                   Alternatively you can use "new SourceCacheTrade, long>(t=>t.Id)" and manually maintain the cache.
-                                               
-			                                                   For examples of creating a observable change sets, see https://github.com/RolandPheasant/DynamicData.Snippets
-			                                               */
-
-			                                               //bit of code to generate trades
-			                                               var random = new Random();
-
-			                                               //initally load some trades 
-			                                               cache.AddOrUpdate(this._tradeGenerator.Generate(5_000, true));
-
-			                                               TimeSpan RandomInterval() => TimeSpan.FromMilliseconds(random.Next(2500, 5000));
-
-
-			                                               // create a random number of trades at a random interval
-			                                               var tradeGenerator = this._schedulerProvider.Background
-			                                                                        .ScheduleRecurringAction(RandomInterval,
-			                                                                                                 action: () =>
-			                                                                                                 {
-				                                                                                                 var number = random.Next(1, 5);
-				                                                                                                 var trades = this._tradeGenerator.Generate(number);
-				                                                                                                 cache.AddOrUpdate(trades);
-			                                                                                                 });
-
-			                                               // close a random number of trades at a random interval
-			                                               var tradeCloser = this._schedulerProvider.Background
-			                                                                     .ScheduleRecurringAction(RandomInterval,
-			                                                                                              action: () =>
-			                                                                                              {
-				                                                                                              var number = random.Next(1, 2);
-
-				                                                                                              cache.Edit(innerCache =>
-				                                                                                              {
-					                                                                                              var trades = innerCache.Items
-					                                                                                                                     .Where(trade => trade.Status == TradeStatus.Live)
-					                                                                                                                     .OrderBy(t => Guid.NewGuid())
-					                                                                                                                     .Take(number)
-					                                                                                                                     .ToArray();
-
-					                                                                                              var toClose = trades.Select(trade => new Trade(trade, TradeStatus.Closed));
-
-					                                                                                              cache.AddOrUpdate(toClose);
-				                                                                                              });
-			                                                                                              });
-
-			                                               //expire closed items from the cache to avoid unbounded data
-			                                               var expirer = cache
-			                                                             .ExpireAfter(timeSelector: t => t.Status == TradeStatus.Closed?
-				                                                                                             TimeSpan.FromMinutes(1) :
-				                                                                                             null,
-			                                                                          TimeSpan.FromMinutes(1),
-			                                                                          this._schedulerProvider.Background)
-			                                                             .Subscribe(x => this._logger.LogInformation("{0} filled trades have been removed from memory", x.Count()));
-
-			                                               return new CompositeDisposable(tradeGenerator, tradeCloser, expirer);
-		                                               },
-		                                               keySelector: trade => trade.Id);
+		foreach (var trade in trades)
+		{
+			trade.SetMarketPrice(price);
+		}
 	}
 }
