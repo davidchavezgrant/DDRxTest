@@ -23,7 +23,7 @@ public class Trade
 		this.Customer     = trade.Customer;
 		this.CurrencyPair = trade.CurrencyPair;
 		this.Status       = status;
-	}
+		}
 
 
 
