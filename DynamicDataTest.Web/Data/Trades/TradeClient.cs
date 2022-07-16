@@ -1,31 +1,32 @@
 using System.Reactive.Disposables;
+using System.Reactive.Linq;
 
 using DynamicData;
 using DynamicData.Kernel;
 
 namespace DynamicDataTest.Web.Data.Trades;
 
-public interface IsTradeClient
-{
-	IObservableCache<Trade, long> Trades { get; }
-}
 
 
-class TradeClient : IsTradeClient
+
+public class TradeClient 
 {
-	readonly ILogger           _logger;
 	readonly SchedulerProvider _schedulerProvider;
 	readonly TradeGenerator    _tradeGenerator;
+	readonly IObservableCache<Trade, long> _tradesCache;
 
-	public TradeClient(ILogger logger, TradeGenerator tradeGenerator, SchedulerProvider schedulerProvider)
+	public TradeClient(TradeGenerator tradeGenerator, SchedulerProvider schedulerProvider)
 	{
-		this._logger            = logger;
 		this._tradeGenerator    = tradeGenerator;
 		this._schedulerProvider = schedulerProvider;
+		var          tradesData = GenerateTradesAndMaintainCache().Publish().RefCount();
+
+		//create a derived cache  
+		this._tradesCache = tradesData.Filter(trade => trade.Status == TradeStatus.Live).AsObservableCache();
 	}
 
 	/// <inheritdoc />
-	public IObservableCache<Trade, long> Trades { get; }
+	public IObservableCache<Trade, long> Trades => this._tradesCache; 
 
 	IObservable<IChangeSet<Trade, long>> GenerateTradesAndMaintainCache()
 	{
@@ -86,7 +87,7 @@ class TradeClient : IsTradeClient
 				                                                                                             null,
 			                                                                          TimeSpan.FromMinutes(1),
 			                                                                          this._schedulerProvider.Background)
-			                                                             .Subscribe(x => this._logger.LogInformation("{0} filled trades have been removed from memory", x.Count()));
+			                                                             .Subscribe(x => Console.WriteLine("{0} filled trades have been removed from memory", x.Count()));
 
 			                                               return new CompositeDisposable(tradeGenerator, tradeCloser, expirer);
 		                                               },

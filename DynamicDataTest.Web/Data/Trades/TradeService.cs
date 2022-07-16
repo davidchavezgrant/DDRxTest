@@ -5,7 +5,7 @@ using DynamicData;
 
 namespace DynamicDataTest.Web.Data.Trades;
 
-sealed class TradeService
+public sealed class TradeService
 {
 	readonly TradeClient      _client;
 	readonly MarketDataService _marketDataService;

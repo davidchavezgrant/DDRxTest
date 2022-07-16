@@ -1,8 +1,24 @@
 @page "/trades"
+@using DynamicDataTest.Web.Data.Trades
+@inherits ReactiveUI.Blazor.ReactiveComponentBase<DynamicDataTest.Web.Data.Trades.TradeViewModel>
+@inject TradeViewModel InjectedVm
 <h3>Trades</h3>
 
-@code {
+@foreach (var trade in ViewModel.Data)
+{
+    <h3>@trade.Id</h3>
+    <h3>@trade.Amount</h3>
+}
 
-    
+
+@code 
+{
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.ViewModel = this.InjectedVm;
+        base.OnInitialized();
+    }
+
 
 }

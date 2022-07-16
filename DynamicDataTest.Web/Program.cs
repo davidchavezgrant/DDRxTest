@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Refit;
 using DynamicDataTest.Web.Data;
 using DynamicDataTest.Web.Data.Profiles;
+using DynamicDataTest.Web.Data.Trades;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +18,15 @@ builder.Services
 builder.Services.AddScoped<IProfilesApiClient, ProfilesApiClient>();
 builder.Services.AddScoped<IProfilesCache, ProfilesCache>();
 builder.Services.AddScoped<ProfilesViewModel>();
+builder.Services.AddScoped<TradeClient>();
+builder.Services.AddScoped<TradeService>();
+builder.Services.AddScoped<TradeViewModel>();
+builder.Services.AddScoped<SearchHints>();
+builder.Services.AddSingleton<TradeGenerator>();
+builder.Services.AddSingleton<SchedulerProvider>();
+builder.Services.AddSingleton<StaticData>();
+builder.Services.AddSingleton<MarketDataService>();
+builder.Services.AddLogging();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

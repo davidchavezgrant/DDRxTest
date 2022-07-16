@@ -7,7 +7,7 @@ using DynamicData.Binding;
 
 namespace DynamicDataTest.Web.Data.Trades;
 
-class SearchHints : AbstractNotifyPropertyChanged, IDisposable
+public class SearchHints : AbstractNotifyPropertyChanged, IDisposable
 {
 	readonly IDisposable                          _cleanUp;
 	readonly ReadOnlyObservableCollection<string> _hints;
