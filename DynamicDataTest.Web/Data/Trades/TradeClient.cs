@@ -22,7 +22,7 @@ public class TradeClient
 		var          tradesData = GenerateTradesAndMaintainCache().Publish().RefCount();
 
 		//create a derived cache  
-		this._tradesCache = tradesData.Filter(trade => trade.Status == TradeStatus.Live).AsObservableCache();
+		this._tradesCache = tradesData.Filter(trade => trade.Status == TradeStatus.Live).Filter(x => x.Id > 5000).AsObservableCache();
 	}
 
 	/// <inheritdoc />
